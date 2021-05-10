@@ -1,0 +1,164 @@
+#!/bin/bash
+#
+# PIT Backend API Script
+# https://github.com/hyper/pit
+#
+# CGI Framework based from https://github.com/ruudud/cgi
+#
+
+# Load configuration
+source /srv/pit/pit.conf
+
+#-----------------------------------------------------
+# Parameter Parsing
+
+declare -A GET_PARAMS
+declare -A POST_PARAMS
+
+read_POST_vars() {
+  if [[ "$REQUEST_METHOD" = "POST" ]] && [[ ! -z "$CONTENT_LENGTH" ]]; then
+    QUERY_STRING_POST=$(dd bs="${CONTENT_LENGTH}" count=1 status=none)
+  fi
+}
+
+parse_POST_params() {
+    saveIFS=$IFS
+    IFS='=&'
+    parm=($QUERY_STRING_POST)
+    IFS=$saveIFS
+    for ((i=0; i<${#parm[@]}; i+=2))
+    do
+        POST_PARAMS[${parm[i]}]=${parm[i+1]}
+    done
+    return
+}
+
+parse_GET_params() {
+    saveIFS=$IFS
+    IFS='=&'
+    parm=($QUERY_STRING)
+    IFS=$saveIFS
+    for ((i=0; i<${#parm[@]}; i+=2))
+    do
+        GET_PARAMS[${parm[i]}]=${parm[i+1]}
+    done
+    return
+}
+
+read_POST_vars
+parse_POST_params
+parse_GET_params
+
+echo "Finished parsing POST" >> /srv/pit/log/pit-debug.log
+
+
+POST_vars_to_str() {
+  local __resultvar=$1
+  local q
+  for param in "${!POST_PARAMS[@]}"; do
+    q="${q} \"${param}\": \"${POST_PARAMS[$param]}\","
+  done
+  eval $__resultvar="'$q'"
+}
+
+new_session() {
+  echo "New Session established"
+  exit 0
+}
+
+
+do_POST() {
+#  POST_vars_to_str result
+  echo "Status: 200 OK"
+  echo ""
+
+  case ${POST_PARAMS["op"]} in
+    newsession)
+        new_session
+        ;;
+    *)
+        echo "{ result: 'fail' }"
+        exit 0
+        ;;
+    esac
+}
+
+do_GET() {
+  echo "Status: 405 Method Not Allowed"
+  echo ""
+
+  for param in "${!GET_PARAMS[@]}"; do
+    echo "\"${param}\": \"${GET_PARAMS[$param]}\","
+    if [[ "${param}" == "get" ]]; then
+       local val=$(get_setting "${GET_PARAMS[$param]}")
+       echo "Rturned: $val"
+    else
+      set_entry "${param}" "${GET_PARAMS[$param]}"
+      echo "SET"
+
+   fi
+#    q="${q} \"${param}\": \"${GET_PARAMS[$param]}\","
+
+  done
+#  echo "q: $q"
+
+  cat <<JSON
+{
+    "query_string": "$QUERY_STRING"
+}
+JSON
+}
+
+
+DB_FILE=/srv/pit/db/test.db
+
+# This query function will allow us to perform an operation, but wait for 20 seconds if the file is locked.
+function query() {
+  sqlite3 -init <(echo ".timeout 20000") $DB_FILE "$1" 2>/dev/null
+}
+
+
+function create_table() {
+  query "CREATE TABLE Entries (Name TEXT UNIQUE, Value TEXT DEFAULT NULL, Timer INTEGER DEFAULT 0);"
+}
+
+function set_entry() {
+    local NAME=$1
+    local VALUE=$2
+    local VVAL=$(query "SELECT Value FROM Entries WHERE Name='$NAME';")
+    if [ -z "$VVAL" ]; then
+            # No Setting.
+            query "INSERT INTO Entries (Name, Value) VALUES ('$NAME', '$VALUE');"
+    else
+            query "UPDATE Entries SET Value='$VALUE' WHERE Name='$NAME';"
+    fi
+}
+
+function get_setting() {
+    local NAME=$1
+    local VALUE=$(query "SELECT Value FROM Entries WHERE Name='$NAME';")
+    echo "$VALUE"
+}
+
+
+
+
+# Common headers goes here
+echo "Content-Type: application/json"
+
+case $REQUEST_METHOD in
+  POST)
+    do_POST
+    ;;
+  GET)
+    do_GET
+    ;;
+  *)
+    echo "No handle for $REQUEST_METHOD"
+    exit 0
+    ;;
+esac
+
+
+# Print out available ENV vars
+#/usr/bin/env

@@ -1,0 +1,41 @@
+#!/bin/bash
+# HTTP POST and GET params in an associative array
+declare -A GET_PARAMS
+declare -A POST_PARAMS
+
+read_POST_vars() {
+  if [[ "$REQUEST_METHOD" = "POST" ]] && [[ ! -z "$CONTENT_LENGTH" ]]; then
+    QUERY_STRING_POST=$(dd bs="${CONTENT_LENGTH}" count=1 status=none)
+  fi
+}
+
+parse_POST_params() {
+
+saveIFS=$IFS
+IFS='=&'
+parm=($QUERY_STRING_POST)
+IFS=$saveIFS
+for ((i=0; i<${#parm[@]}; i+=2))
+do
+    POST_PARAMS[${parm[i]}]=${parm[i+1]}
+done
+return
+}
+
+parse_GET_params() {
+saveIFS=$IFS
+IFS='=&'
+parm=($QUERY_STRING)
+IFS=$saveIFS
+for ((i=0; i<${#parm[@]}; i+=2))
+do
+    GET_PARAMS[${parm[i]}]=${parm[i+1]}
+done
+return
+}
+
+read_POST_vars
+parse_POST_params
+parse_GET_params
+
+

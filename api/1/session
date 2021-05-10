@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# PIT Backend API Script
+# https://github.com/hyper/pit
+#
+# Process new session connections.
+#
+# CGI Framework based from https://github.com/ruudud/cgi
+#
+
+# httputils creates the associative arrays POST_PARAMS and GET_PARAMS
+if [[ "$SCRIPT_FILENAME" ]]; then
+  . "$(dirname $SCRIPT_FILENAME)/.pit-common"
+else
+  . "$(dirname $(pwd)$SCRIPT_NAME)/.pit-common"
+fi
+
+
+
+
+# Common headers goes here
+echo "Content-Type: application/json"
+
+# we have a new request to establish a session.  We have received the public key for the session.
+
+## TODO - check the integrity of the private key, before we waste resources generating a new keypair.
+
+# Create new keypair
+
+# Create record in session table.
+
+
+## TODO - the client key is encoded in safe-html... so will need to have some characters replaced.
+
+  echo "Client Public Key:" >> /srv/pit/log/pit-debug.log
+  echo ${POST_PARAMS["puk"]} >> /srv/pit/log/pit-debug.log
+
+
+#  POST_vars_to_str result
+  echo "Status: 200 OK"
+  echo ""
+
+  echo "Finished parsing POST" >> /srv/pit/log/pit-debug.log
+  echo "New Session established"
+  exit 0
+
+
+

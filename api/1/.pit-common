@@ -1,0 +1,94 @@
+#!/bin/bash
+#
+# PIT Backend API Script
+# https://github.com/hyper/pit
+#
+# Common functionality shared by the various operations
+#
+# CGI Framework based from https://github.com/ruudud/cgi
+#
+
+#-----------------------------------------------------
+# Parameter Parsing
+
+declare -A GET_PARAMS
+declare -A POST_PARAMS
+
+read_POST_vars() {
+  if [[ "$REQUEST_METHOD" = "POST" ]] && [[ ! -z "$CONTENT_LENGTH" ]]; then
+    QUERY_STRING_POST=$(dd bs="${CONTENT_LENGTH}" count=1 status=none)
+  fi
+}
+
+parse_POST_params() {
+    saveIFS=$IFS
+    IFS='=&'
+    parm=($QUERY_STRING_POST)
+    IFS=$saveIFS
+    for ((i=0; i<${#parm[@]}; i+=2))
+    do
+        POST_PARAMS[${parm[i]}]=${parm[i+1]}
+    done
+    return
+}
+
+parse_GET_params() {
+    saveIFS=$IFS
+    IFS='=&'
+    parm=($QUERY_STRING)
+    IFS=$saveIFS
+    for ((i=0; i<${#parm[@]}; i+=2))
+    do
+        GET_PARAMS[${parm[i]}]=${parm[i+1]}
+    done
+    return
+}
+
+read_POST_vars
+parse_POST_params
+parse_GET_params
+
+
+POST_vars_to_str() {
+  local __resultvar=$1
+  local q
+  for param in "${!POST_PARAMS[@]}"; do
+    q="${q} \"${param}\": \"${POST_PARAMS[$param]}\","
+  done
+  eval $__resultvar="'$q'"
+}
+
+# Load the configuration
+test -e /srv/pit/pit.conf && source $_
+
+# This query function will allow us to perform an operation, but wait for 20 seconds if the file is locked.
+function query() {
+  sqlite3 -init <(echo ".timeout 20000") $DB_FILE "$1" 2>/dev/null
+}
+
+# This function is used when inserting into a table, and wanting the new RowID (primary key) returned.
+function query_insert() {
+  return $(query "$1; SELECT last_row_id();")
+}
+
+
+function set_entry() {
+    local NAME=$1
+    local VALUE=$2
+    local VVAL=$(query "SELECT Value FROM Entries WHERE Name='$NAME';")
+    if [ -z "$VVAL" ]; then
+            # No Setting.
+            query "INSERT INTO Entries (Name, Value) VALUES ('$NAME', '$VALUE');"
+    else
+            query "UPDATE Entries SET Value='$VALUE' WHERE Name='$NAME';"
+    fi
+}
+
+function get_setting() {
+    local NAME=$1
+    local VALUE=$(query "SELECT Value FROM Entries WHERE Name='$NAME';")
+    echo "$VALUE"
+}
+
+
+
