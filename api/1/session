@@ -36,6 +36,22 @@ echo "Content-Type: application/json"
   echo ${POST_PARAMS["puk"]} >> /srv/pit/log/pit-debug.log
 
 
+
+
+  # create a new sessions record in the database.
+  session_id=$(query_insert "INSERT INTO Sessions (LastAccess, ExpireTime) VALUES (date('now'), 600);")
+  echo "New Session: $session_id" >> /srv/pit/log/pit-debug.log
+
+
+  PUKFILE=$(work_file "session-client-key" "pem");
+  echo "work_file: $PUKFILE" >> /srv/pit/log/pit-debug.log
+
+  # puk is base64, so as we are writing it to the file, we decode it.
+  echo ${POST_PARAMS["puk"]} | base64 -d > $PIT_DATA_DIR/sessions/$session_id-client.pem
+
+  # create a new privatekey pair for the session.  Obtain the public key and send it back tot he client.  we dont need to store it.
+
+
 #  POST_vars_to_str result
   echo "Status: 200 OK"
   echo ""

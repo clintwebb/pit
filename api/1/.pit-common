@@ -63,12 +63,12 @@ test -e /srv/pit/pit.conf && source $_
 
 # This query function will allow us to perform an operation, but wait for 20 seconds if the file is locked.
 function query() {
-  sqlite3 -init <(echo ".timeout 20000") $DB_FILE "$1" 2>/dev/null
+  sqlite3 -init <(echo ".timeout 20000") $PIT_DB_FILE "$1" 2>/dev/null
 }
 
 # This function is used when inserting into a table, and wanting the new RowID (primary key) returned.
 function query_insert() {
-  return $(query "$1; SELECT last_row_id();")
+  echo $(query "$1; SELECT last_insert_rowid();")
 }
 
 
@@ -89,6 +89,16 @@ function get_setting() {
     local VALUE=$(query "SELECT Value FROM Entries WHERE Name='$NAME';")
     echo "$VALUE"
 }
+
+
+# Generate a random work file.  For better management of rougue files, give it a unique starting name, and an extention.   A random number will be added to the
+function work_file() {
+  local fname=$1
+  local fext=$2
+
+  echo "${PIT_TMP_DIR}/$fname-${RANDOM}.${fext}"
+}
+
 
 
 
