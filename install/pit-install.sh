@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# ask where the base install should go.
+
+
+
 mkdir /srv/pit
 mkdir /srv/pit/tmp
 

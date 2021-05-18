@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# PIT Backend API Script
+# https://github.com/hyper/pit
+#
+# Process new account request.
+#  (Note that this will likely be modular in the future, as different mechanisms might be utilised to authenticate new accounts)
+#
+# CGI Framework based from https://github.com/ruudud/cgi
+#
+
+
+
+
+if [[ "$SCRIPT_FILENAME" ]]; then
+  . "$(dirname $SCRIPT_FILENAME)/.pit-common"
+else
+  . "$(dirname $(pwd)$SCRIPT_NAME)/.pit-common"
+fi
+
+# enable debugging for now.
+PIT_DEBUG=1
+
+
+# Common headers goes here
+echo "Content-Type: application/json"
+
+# verify that a sessionID was provided.
+SID=${POST_PARAMS["sid"]}
+VV=check_session $SID
+if [[ $VV -gt 0 ]]; then
+  debug_out "newaccount/[$SID]: Invalid Session"
+  echo "Status: 500 Failure"
+  echo ""
+  echo "{ result: 'invalid-session' }"
+  exit 0
+fi
+
+
+
+SESSION_CLIENT_PUBLIC=$PIT_DATA_DIR/sessions/$SID-client.pem
+SESSION_SERVER_PRIVATE=$PIT_DATA_DIR/sessions/$SID-server.pem
+
+
+# we have a request to create a new account.  It will be encoded inside a session packet, so we first need to decode that.
+
+
+debug_out "newaccount/[$SID]: Valid Session."
+
+
+SESS_PK=$(urldecode ${POST_PARAMS["pk"]})
+SESS_PD=$(urldecode ${POST_PARAMS["pd"]})
+SESS_PS=$(urldecode ${POST_PARAMS["ps"]})
+
+
+debug_out "newaccount/[$SID]: PK: $SESS_PK"
+debug_out "newaccount/[$SID]: PD: $SESS_PD"
+debug_out "newaccount/[$SID]: PS: $SESS_PS"
+
+
+
+        ## format the output.
+        EOUT="{ \"k\": \"$AA\", \"d\": \"$BB\" }"
+
+        #  POST_vars_to_str result
+        echo "Status: 200 OK"
+        echo ""
+        debug_out "newaccount/[$SID]: output - $EOUT"
+        echo "$EOUT"
+
+        # everything should be good at this point, so we exit.  Everything else after this point, is assuming there was a failure.
+        exit 0
+
+
+
+#######################################
+# If we get to this point, something failed, so we are returning a fail result.
+echo "Status: 500 Failure"
+echo ""
+echo "{"
+echo "  result: 'failed'"
+if [[ -n "$1" ]]; then
+  echo "  comment: '$1'"
+fi
+echo "}"
+exit 0

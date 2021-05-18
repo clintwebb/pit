@@ -100,5 +100,71 @@ function work_file() {
 }
 
 
+function debug_out() {
+  if [[ $PIT_DEBUG -gt 0 ]]; then
+    echo "$1" >> $PIT_LOG_DEBUG
+  fi
+}
+
+
+urldecode() {
+    # urldecode <string>
+
+    local url_encoded="${1//+/ }"
+    printf '%b' "${url_encoded//%/\\x}"
+}
+
+
+function check_session() {
+    local SID=$1
+
+    # check that at least a session number was provided.
+    if [[ $SID -gt 0 ]]; then
+
+        # check that the key files exist.
+        if [[ -e $PIT_DATA_DIR/sessions/$SID-client.pem && -e $PIT_DATA_DIR/sessions/$SID-server.pem ]]; then
+            # check the database to see that the session is active.
+
+            local RES=$(query "DELETE FROM Sessions WHERE datetime(Expires) < datetime('now');SELECT Expires FROM Sessions WHERE SessionID=$SID;")
+            if [[ $RES -gt 0 ]]; then
+                return 0;
+            fi
+        fi
+    fi
+
+    # if we got here, then the session is invalid.
+    return 1;
+}
+
+
+# this function will return 0 if the session is currently active and valid.  Will return a 1 if not.
+# note that we hard-code some limits on the Expire time
+function update_session() {
+  local SID=$1
+  if [[ $PIT_SESSION_EXPIRE -lt 60 || $PIT_SESSION_EXPIRE -gt 3600 ]]; then
+    PIT_SESSION_EXPIRE=600;
+  fi
+  local RES=$(query("DELETE FROM Sessions WHERE datetime(Expires) < datetime('now');UPDATE Sessions SET Expires=datetime('now','$PIT_SESSION_EXPIRE seconds') WHERE SessionID=$SID;SELECT Expires FROM Sessions WHERE SessionID=$SID;"))
+  if [[ -z $RES ]]; then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
+
+function unpack_session() {
+    local SID=$1
+    local SKEY=$2
+    local SDATA=$3
+
+    # check that the keys for this session exist.
+
+    # so how are we going to return the data we receive?
+    #  Maybe it needs to be done specifically based on the api call, rather than a generic one... because in some cases, it is an instruction, but in other cases, it is just storing a pack.
+    return 0;
+}
+
+
 
 

@@ -33,13 +33,13 @@
 
     
     <!-- Custom styles for this template -->
-    <link href="signin.css" rel="stylesheet">
+    <link href="/css/signin.css" rel="stylesheet">
   </head>
   <body class="text-center">
-    
+
 <main class="form-signin">
   <form>
-    <img class="mb-4" src="../assets/brand/bootstrap-logo.svg" alt="" width="72" height="57">
+    <img class="mb-4" src="/assets/brand/bootstrap-logo.svg" alt="" width="72" height="57">
     <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
 
     <div class="form-floating">
@@ -65,9 +65,12 @@
     
   </body>
   <script src="/js/vendor/jquery-2.1.1.min.js"></script>
-  <script src="/js/base64.js"></script>
-  <script src="/js/jsencrypt.min.js"></script>
-  <script>
+  <script src="/js/vendor/base64.js"></script>
+  <script src="/js/vendor/jsencrypt.min.js"></script>
+  <script src="/js/sessions.js"></script>
+  <script src="/js/packs.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+<script>
 
     $(document).ready(function() {
         console.log("testing");
@@ -79,26 +82,33 @@
         var privkey  = crypt.getPrivateKey();
         var pubkey  =  crypt.getPublicKey();
 
-        console.log("priv: " + privkey);
-        console.log("pub:  " + pubkey);
-
         // send the public key to the server
         var sdata = { 'puk': Base64.encode(pubkey) };
 
-        console.log("sdata.puk: " + sdata.puk);
+        $.ajax({
+                url: '/api/1/session',
+                dataType: 'json',
+                type: 'post',
+                contentType: 'application/x-www-form-urlencoded',
+                data: sdata,
+                success: function( data, textStatus, jQxhr ){
 
-        $.post('http://localhost/api/1/session', sdata)
-            .done(function(response){
-                console.log("success: " + response);
+                    var pack = Pack.unpack(privkey, data);
+                    if ( pack.success ) {
+                        console.log("SUCCESS!!");
+                    }
+                    else {
+                        console.log("FAILED!");
+                    }
+
+                    var sespub = Base64.decode(pack.public);
+                    console.log("session-server-public: " + sespub);
+
+                },
+                error: function( jqXhr, textStatus, errorThrown ){
+                    console.log( errorThrown );
+                }
             });
-
-
-        // receive a packet from the server that contains data encrypted.
-
-        // decrypt the data with the private key
-
-
-
     });
   </script>
 
