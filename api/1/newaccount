@@ -52,12 +52,13 @@ SESS_PK=$(urldecode ${POST_PARAMS["pk"]})
 SESS_PD=$(urldecode ${POST_PARAMS["pd"]})
 SESS_PS=$(urldecode ${POST_PARAMS["ps"]})
 
+# first we get the pack-key.  This is encrypted with the session-server-public key, so we need to use the session-server-private key to decrypt it.
+AA=$(echo -n $SESS_PK|base64 -d|openssl rsautl -decrypt -inkey $SESSION_SERVER_PRIVATE -pubin)
+debug_out "newaccount/[$SID]: AA: $AA"
 
-debug_out "newaccount/[$SID]: PK: $SESS_PK"
-debug_out "newaccount/[$SID]: PD: $SESS_PD"
-debug_out "newaccount/[$SID]: PS: $SESS_PS"
 
 
+# urldecode ${POST_PARAMS["puk"]} | base64 -d > $SESSION_CLIENT_PUBLIC
 
         ## format the output.
         EOUT="{ \"k\": \"$AA\", \"d\": \"$BB\" }"

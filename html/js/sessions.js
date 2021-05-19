@@ -99,16 +99,12 @@ var Session = {
     },
 
     randpass : function() {
-        var array = new Uint32Array(8);
+        var array = new Uint32Array(4);
         window.crypto.getRandomValues(array);
         var va = array[0].toString(16) +
                  array[1].toString(16) +
                  array[2].toString(16) +
-                 array[3].toString(16) +
-                 array[4].toString(16) +
-                 array[5].toString(16) +
-                 array[6].toString(16) +
-                 array[7].toString(16);
+                 array[3].toString(16);
         return va;
     },
 
@@ -128,7 +124,10 @@ var Session = {
 
         // generate a random string aes-key
 		sdata.skey = Session.randpass();
+        console.log("payload: ", sdata.payload);
+        console.log("skey: ", sdata.skey);
 		sdata.payload_ready= CryptoJS.AES.encrypt(payload_output, sdata.skey).toString();
+        console.log("payload: ", sdata.payload_ready);
 
 		Session.__send(sdata);
     },
@@ -154,6 +153,8 @@ var Session = {
 		var active_session = JSON.parse(sessionStorage.getItem("session"));
 		console.assert(active_session);
 
+        console.log("session-server-public: ", active_session.server)
+
         // use the session session-server-public key to encrypt the aes-key.
         var encrypt = new JSEncrypt();
 		console.assert(active_session.server);
@@ -161,6 +162,7 @@ var Session = {
 		console.assert(sdata.skey)
         var password = encrypt.encrypt(sdata.skey);
 		console.assert(password);
+        console.log("encrypted pass: ", password);
 
 
 		console.assert(active_session.client);
