@@ -75,3 +75,5 @@ var Pack = {
 
 
 }
+
+console.log("Packs module loaded");

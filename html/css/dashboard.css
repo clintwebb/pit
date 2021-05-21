@@ -93,25 +93,14 @@ body {
   border-top-right-radius: 0;
 }
 
-
-.form-signup-verify {
-    display: none;
-    width: 100%;
-    max-width: 330px;
-    padding: 15px;
-    margin: auto;
-}
-
-.form-signup-verify .form-floating:focus-within {
-  z-index: 2;
-}
-
-
-.form-signup-verify input[type="password"] {
+.form-signup input[type="password"] {
   margin-bottom: 10px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
+
+
+
 
 
 

@@ -3,7 +3,7 @@
 var Orgs = {
 
 
-    neworgpack : function(predata) {
+    newOrgPack : function(predata) {
 
 		if (! predata.name) { predata.name = "Unnamed"; }
 
@@ -46,7 +46,27 @@ var Orgs = {
 
         return result;
 
-    }
+    },
+	getOrg: function(orgid) {
+		console.log("GetOrg - getting the organisation data");
+
+		var org = null;
+
+		// we should really always have the mainorg in session storage.
+		if ("mainorg" in sessionStorage) {
+			var mainorg = JSON.parse(sessionStorage["mainorg"]);
+			if (mainorg.orgid == orgid) {
+				org = mainorg;
+			}
+		}
+
+		// the mainorg wasn't the org we were logging for.
+		if (org == null) {
+			// we dont have the org yet.
+		}
+
+		return org;
+	}
 };
 
 console.log("Orgs module loaded");
