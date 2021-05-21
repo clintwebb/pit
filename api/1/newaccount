@@ -22,66 +22,87 @@ fi
 PIT_DEBUG=1
 
 
-# Common headers goes here
+# Common headers goes here.  We will always return a 200.
 echo "Content-Type: application/json"
+echo "Status: 200 OK"
+echo ""
 
-# verify that a sessionID was provided.
-SID=${POST_PARAMS["sid"]}
-VV=check_session $SID
-if [[ $VV -gt 0 ]]; then
-  debug_out "newaccount/[$SID]: Invalid Session"
-  echo "Status: 500 Failure"
-  echo ""
-  echo "{ result: 'invalid-session' }"
+
+# expected parameters.
+#                 'id': id-hash,
+#                 'g': guard,
+#                 'gh': guard_hash,
+#                 'pr': encprivkey,
+#                 'pub': pubkey,
+#                 'oid': orgid,
+#                 'org-hash': orgpack.hash,
+#                 'org-key': orgpack.key,
+#                 'org-data': orgpack.data,
+#                 'org-sign': orgpack.sign
+
+
+SID=${POST_PARAMS["id"]}
+debug_out "[newaccount] id-hash:$SID"
+
+# check the database to ensure that
+DBUID=$(query "SELECT UserID FROM Users WHERE IDHash='$SID'")
+debug_out "[newaccount] DBUID:$DBUID"
+if [[ -n $DBUID ]]; then
+  # the user hash already exists.
+  debug_out "[newaccount] User already exists"
+  out_err "exists" "User already exists"
   exit 0
 fi
 
+debug_out "[newaccount] UID:$UID"
+
+SG=$(urldecode ${POST_PARAMS["g"]})
+SGH=$(urldecode ${POST_PARAMS["gh"]})
+SPR=$(urldecode ${POST_PARAMS["pr"]})
+SPUB=$(urldecode ${POST_PARAMS["pub"]})
+SOID=$(urldecode ${POST_PARAMS["oid"]})
+SOH=$(urldecode ${POST_PARAMS["oh"]})
+SOK=$(urldecode ${POST_PARAMS["ok"]})
+SOD=$(urldecode ${POST_PARAMS["od"]})
+SOS=$(urldecode ${POST_PARAMS["os"]})
 
 
-SESSION_CLIENT_PUBLIC=$PIT_DATA_DIR/sessions/$SID-client.pem
-SESSION_SERVER_PRIVATE=$PIT_DATA_DIR/sessions/$SID-server.pem
+debug_out "[newaccount] SOID:$SOID"
 
 
-# we have a request to create a new account.  It will be encoded inside a session packet, so we first need to decode that.
-
-
-debug_out "newaccount/[$SID]: Valid Session."
-
-
-SESS_PK=$(urldecode ${POST_PARAMS["pk"]})
-SESS_PD=$(urldecode ${POST_PARAMS["pd"]})
-SESS_PS=$(urldecode ${POST_PARAMS["ps"]})
-
-# first we get the pack-key.  This is encrypted with the session-server-public key, so we need to use the session-server-private key to decrypt it.
-AA=$(echo -n $SESS_PK|base64 -d|openssl rsautl -decrypt -inkey $SESSION_SERVER_PRIVATE -pubin)
-debug_out "newaccount/[$SID]: AA: $AA"
-
-
-
-# urldecode ${POST_PARAMS["puk"]} | base64 -d > $SESSION_CLIENT_PUBLIC
-
-        ## format the output.
-        EOUT="{ \"k\": \"$AA\", \"d\": \"$BB\" }"
-
-        #  POST_vars_to_str result
-        echo "Status: 200 OK"
-        echo ""
-        debug_out "newaccount/[$SID]: output - $EOUT"
-        echo "$EOUT"
-
-        # everything should be good at this point, so we exit.  Everything else after this point, is assuming there was a failure.
-        exit 0
+# TODO - verify that the org-sign is a valid signature of org-data with the public key.
+#
 
 
 
-#######################################
-# If we get to this point, something failed, so we are returning a fail result.
-echo "Status: 500 Failure"
-echo ""
-echo "{"
-echo "  result: 'failed'"
-if [[ -n "$1" ]]; then
-  echo "  comment: '$1'"
+
+
+DUID=$(query_insert "INSERT INTO Users (IDHash, Guard, RecoveryPack, PublicKey, OrgHash) VALUES ('$SID', '$SG', '$SPR', '$SPUB', '$SOID')")
+DOID=$(query_insert "INSERT INTO Organisations (OrgHash, OrgPack, PublicKey) VALUES ('$SOID', '$SOH', '$SPUB')")
+
+debug_out "[newaccount] UID:$DUID, OID:$DOID"
+
+# Verify the Org doesn't already exist, and Create the Org directory
+if [[ -d $PIT_DATA_DIR/packs/$SOID ]]; then
+  out_err "exists" "Organisation already exists"
+  exit 0;
+else
+  mkdir $PIT_DATA_DIR/packs/$SOID
+  mkdir $PIT_DATA_DIR/packs/$SOID/${SOH:0:6}
+
+  echo "{ \"h\": \"$SOH\", \"k\": \"$SOK\", \"d\": \"$SOD\", \"s\": \"$SOS\" }" > $PIT_DATA_DIR/packs/$SOID/${SOH:0:6}/$SOH.pack
 fi
-echo "}"
+
+
+## format the output.
+EOUT="{ \"success\": true }"
+
+#  POST_vars_to_str result
+echo "$EOUT"
+debug_out "[newaccount] output - $EOUT"
+
+# everything should be good at this point, so we exit.  Everything else after this point, is assuming there was a failure.
 exit 0
+
+
+

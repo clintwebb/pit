@@ -72,36 +72,53 @@ $(document).ready(function() {
             // activate the loading overlay.
             $(".loader").show();
 
-            // establish the session
-            Session.check();
-
             // The username and password entered by the user, will be hashed to generate a large string (Account-Guard).
             var inEmail = $('#frm-signup-email').val();
             var auth = CryptoJS.SHA256(inEmail + inPass1).toString();
             console.assert(auth.length > 0);
+            console.log("long-passphrase: ", auth);
 
-//                  A private/public key pair for the user is generated in the browser.
+//          A private/public key pair for the user (and the default ORG) is generated.
             var crypt = new JSEncrypt({default_key_size: 2048});
             crypt.getKey();
 
-//                  A copy of the private key will be protected by that large string (passphrase).
+//          A copy of the private key will be protected by that large string (auth).
+            var id = CryptoJS.SHA256(inEmail).toString();
             var privkey  = crypt.getPrivateKey();
             var pubkey   = crypt.getPublicKey();
             var encprivkey = CryptoJS.AES.encrypt(privkey, auth).toString();
             var guard = CryptoJS.SHA256(encprivkey).toString();
             var guard_hash = CryptoJS.SHA256(guard + auth).toString();
 
-            var orgpack = Orgs.neworgpack(inEmail);
+            var org = Orgs.neworgpack({ name: inEmail, key: privkey });
 
+			console.assert(org.orgpack.s);
 
+            // since this is the orgpack for the user, we need to save the
 
             // generate an account-guard (just a hash of the encrypted private key).
-            var sdata = { 'g': guard, 'gh': guard_hash, 'pr': encprivkey, 'pub': pubkey, 'org': orgpack };
-            Session.send({
+            var sdata = {
+				'id': id,
+				'g': guard,
+				'gh': guard_hash,
+				'pr': encprivkey,
+				'pub': Base64.encode(pubkey),
+				'oid': org.orgid,
+				'oh': org.orgpack.h,
+				'ok': org.orgpack.k,
+				'od': org.orgpack.d,
+				'os': org.orgpack.s
+			};
+
+
+
+            PitAPI.send({
                 target: '/api/1/newaccount',
                 payload: sdata,
                 success: function(result) {
-                    console.log("New Account Request done");
+					if (result.success) {
+						console.log("New Account Request done");
+					}
 
                     console.log("AAAA");
                     $(".loader").hide();
@@ -132,6 +149,13 @@ $(document).ready(function() {
         $(".form-signin").show();
         $(".form-signup-verify").hide();
     });
+
+
+    // check the sessionStorage to see if we have anything unpacked in there.
+    // if not, then we need to ask the user to login.
+
+
+
 
 
     $(".loader").hide();
