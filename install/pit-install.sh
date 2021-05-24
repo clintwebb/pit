@@ -20,6 +20,7 @@ CREATE TABLE Users (
   UserID INTEGER UNIQUE PRIMARY KEY,
   IDHash STRING UNIQUE,
   Guard STRING,
+  GuardHash STRING,
   RecoveryPack STRING,
   PublicKey STRING,
   OrgHash STRING

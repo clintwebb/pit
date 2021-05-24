@@ -46,16 +46,16 @@
 			<h1 class="h3 mb-3 fw-normal">Welcome Back!</h1>
 
 			<div class="form-floating">
-				<input type="email" class="form-control" id="floatingInput" placeholder="name@example.com">
+				<input type="email" class="form-control" id="frm-signin-email" placeholder="name@example.com">
 				<label for="floatingInput">Email address</label>
 			</div>
 			<div class="form-floating">
-				<input type="password" class="form-control" id="floatingPassword" placeholder="Password">
+				<input type="password" class="form-control" id="frm-signup-pass" placeholder="Password">
 				<label for="floatingPassword">Password</label>
 			</div>
 			<div class="checkbox mb-3">
 				<label>
-					<input type="checkbox" value="remember-me"> Remember me
+					<input type="checkbox" id="login-remember" value="remember-me"> Remember me
 				</label>
 			</div>
 			<button id="but-signin" class="w-100 btn btn-lg btn-primary" type="button">Sign in</button><br>
@@ -80,7 +80,7 @@
 			</div>
 			<div class="checkbox mb-3">
 				<label>
-					<input type="checkbox" value="remember-me"> Remember me
+					<input type="checkbox" id="login-remember2" value="remember-me"> Remember me
 				</label>
 			</div>
 			<button id="but-signup" class="w-100 btn btn-lg btn-primary" type="button">Create Account</button><br>
@@ -276,7 +276,9 @@
     <script src="/js/vendor/jsencrypt.min.js"></script>
     <script src="/js/vendor/base64.js"></script>
     <script src="/js/vendor/crypto-js.min.js"></script>
+    <script src="/js/vendor/underscore-1.11.0-min.js"></script>
 
+    <script src="/js/crypt.js"></script>
     <script src="/js/packs.js"></script>
     <script src="/js/orgs.js"></script>
     <script src="/js/dashboard.js"></script>

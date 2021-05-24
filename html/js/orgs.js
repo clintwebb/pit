@@ -52,12 +52,35 @@ var Orgs = {
 
 		var org = null;
 
+
 		// we should really always have the mainorg in session storage.
-		if ("mainorg" in sessionStorage) {
-			var mainorg = JSON.parse(sessionStorage["mainorg"]);
-			if (mainorg.orgid == orgid) {
-				org = mainorg;
-			}
+		console.assert("mainorg" in sessionStorage);
+
+		var orgs = JSON.parse(sessionStorage["orgs"]);
+		if (orgid in orgs) {
+			org = orgs[orgid];
+		}
+		else {
+			// the org isn't in the structure... so we need to look it up
+			$.ajax({
+				url: '/api/1/getorg',
+				dataType: 'json',
+				type: 'post',
+				contentType: 'application/x-www-form-urlencoded',
+				data: {'oid': orgid},
+				success: function( data, textStatus, jQxhr ){
+					if (data.success) {
+						console.log("we have the org data")
+// 						org = Pack.unpack()
+					}
+					else {
+						console.log("failed to ontain the org.");
+					}
+				},
+				error: function( jqXhr, textStatus, errorThrown ){
+					console.log( errorThrown );
+				}
+			});
 		}
 
 		// the mainorg wasn't the org we were logging for.

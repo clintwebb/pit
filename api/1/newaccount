@@ -41,7 +41,7 @@ echo ""
 #                 'org-sign': orgpack.sign
 
 
-SID=${POST_PARAMS["id"]}
+SID=$(urldecode ${POST_PARAMS["id"]})
 debug_out "[newaccount] id-hash:$SID"
 
 # check the database to ensure that
@@ -77,7 +77,7 @@ debug_out "[newaccount] SOID:$SOID"
 
 
 
-DUID=$(query_insert "INSERT INTO Users (IDHash, Guard, RecoveryPack, PublicKey, OrgHash) VALUES ('$SID', '$SG', '$SPR', '$SPUB', '$SOID')")
+DUID=$(query_insert "INSERT INTO Users (IDHash, Guard, GuardHash, RecoveryPack, PublicKey, OrgHash) VALUES ('$SID', '$SG', '$SGH', '$SPR', '$SPUB', '$SOID')")
 DOID=$(query_insert "INSERT INTO Organisations (OrgHash, OrgPack, PublicKey) VALUES ('$SOID', '$SOH', '$SPUB')")
 
 debug_out "[newaccount] UID:$DUID, OID:$DOID"

@@ -120,7 +120,7 @@ function urldecode() {
 function out_err() {
     echo "{"
     echo "  \"success\": false,"
-    echo "  \"reason\": \"$1\""
+    echo "  \"reason\": \"$1\","
     if [[ -n "$2" ]]; then
 		echo "  \"comment\": \"$2\""
     fi

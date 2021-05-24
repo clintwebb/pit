@@ -1,13 +1,5 @@
 /* globals Chart:false, feather:false */
 
-(function () {
-  'use strict'
-
-  feather.replace()
-
-
-
-})()
 
 
 var Dashboard = {
@@ -16,7 +8,11 @@ var Dashboard = {
 
 		navid="nav-org-"+orgdata.orgid;
 
- 		$("#orglist").append("<li class=\"nav-item\" id=\""+navid+"\"><a class=\"nav-link\" href=\"#\" onClick=Dashboard.SelectOrg(\""+orgdata.orgid+"\")><span data-feather=\"package\"></span>"+orgdata.org.settings.orgname+"</a></li>")
+		console.assert(orgdata);
+		console.assert(orgdata.settings);
+		console.assert(orgdata.settings.orgname);
+
+ 		$("#orglist").append("<li class=\"nav-item\" id=\""+navid+"\"><a class=\"nav-link\" href=\"#\" onClick=Dashboard.SelectOrg(\""+orgdata.orgid+"\")><span data-feather=\"package\"></span>"+orgdata.settings.orgname+"</a></li>")
 // 			$('li').append("<p>hello</p>")
 // 				$('a', {class:"nav-link", href:"#", onclick: function() { Dashboard.SelectOrg(orgdata.orgid)}  }).append(
 // 					$('span', {'data-feather': "package"}).append(
@@ -34,16 +30,40 @@ var Dashboard = {
 
 		// lookup the details of this organisation
 		var org = Orgs.getOrg(orgid);
-
-
-
-
 		$("#dash-org-title").text(org.settings.orgname);
+	},
+	Login: function() {
+		// this function will be called the same way, under these circumstances:
+		//  * when the user logs in manually
+		//  * when the user logs in automatically
+		//  * when a new account is setup.
+
+		// then we need to load all the relevant data... specifically the organisations and their main packs.
+		// select the organisation to display... if saved, display the last one that was open.
+		// setup up all the background activities (timers) for processing the message queues.
+
+        $("#intro").hide();
+        $("#main").show();
+
+	},
+	Logout: function() {
+		// clear info out of the session and local storage
+		// reload the page.
 	}
-}
+};
+
+(function () {
+  'use strict'
+
+  console.log("FEATHER")
+  feather.replace()
+
+})()
 
 
 $(document).ready(function() {
+
+	console.log("READY")
 
 	$('#but-add-org').click(function() {
 // 		var org = Orgs.newOrgPack({name: "freddy"});
@@ -54,8 +74,112 @@ $(document).ready(function() {
 
 
     $("#but-signin").click(function() {
-        $("#intro").hide();
-        $("#main").show();
+
+		// we have the username, and the password entered.
+
+		// activate the loading overlay.
+		$(".loader").show();
+
+		// we set an almost immediate timout so that the browser can complete the "Loader" change.  The timeout then fires off, and performs the functionality.  This is to provide a faster visual response to the user.
+		setTimeout(function() {
+
+			// The username and password entered by the user, will be hashed to generate a large string (Account-Guard).
+			var inEmail = $('#frm-signin-email').val();
+			var inPass = $('#frm-signin-email').val();
+			var auth = CryptoJS.SHA256(inEmail + inPass).toString();
+			console.assert(auth.length > 0);
+			console.log("long-passphrase: ", auth);
+
+			var id = CryptoJS.SHA256(inEmail).toString();
+
+			// Now that we have our auth, and our ID, we need to attempt the first phase of the login.
+
+			// if we already have the privkey, then we just need to validate it.
+
+
+			var sdata = { 'id': id };
+
+			$.ajax({
+				url: '/api/1/login',
+				dataType: 'json',
+				type: 'post',
+				contentType: 'application/x-www-form-urlencoded',
+				data: sdata,
+				success: function( data, textStatus, jQxhr ){
+
+					if (data.success) {
+						console.log("Login - phase 1 ok");
+
+						var sdata2 = {
+							id: sdata.id,
+							gh: CryptoJS.SHA256(data.g + auth).toString()
+						}
+
+						$.ajax({
+							url: '/api/1/login',
+							dataType: 'json',
+							type: 'post',
+							contentType: 'application/x-www-form-urlencoded',
+							data: sdata2,
+							success: function( data2, textStatus2, jQxhr2 ){
+
+								if (data2.success) {
+									console.log("Login - phase 2 ok");
+
+// 									var privkey = CryptoJS.AES.decrypt(Base64.decode(data2.rec), auth).toString();
+									var privkey = Crypt.decryptString(data2.rec, auth);
+									console.log("privkey: ", privkey);
+
+									var crypt = new JSEncrypt({default_key_size: 2048});
+									crypt.setPrivateKey(privkey);
+
+									var orgpack = Pack.unpack(privkey, data2.orgpack);
+
+									localStorage.setItem("privkey", data2.rec);
+									localStorage.setItem("mainorgid", orgpack.orgid);
+
+									// if the user selected to rememebr the login, then we also store the auth-hash in localstorage
+									if ($("#login-remember").is(':checked')) {
+										localStorage.setItem("auth", auth);
+									}
+
+									Dashboard.AddOrg(orgpack);
+									Dashboard.Login({
+										'privkey': data2.rec,
+										'auth':    auth
+									})
+								}
+								else {
+									console.log("Failed to login");
+									alert("failed to login");
+								}
+
+								$(".loader").hide();
+							},
+							error: function( jqXhr, textStatus, errorThrown ){
+								console.log("FAILED to establish secure session!");
+								console.log( errorThrown );
+								alert("Login attempt failed... please try again.")
+								$('#frm-signup')[0].password.value = '';
+								$('#frm-signup')[0].verify.value = '';
+								$('#frm-signin')[0].email.select();
+								$(".loader").hide();
+							}
+						});
+					}
+					else {
+						alert("Login attempt failed... please try again.")
+						$('#frm-signin')[0].password.value = '';
+						$('#frm-signin')[0].email.select();
+						$(".loader").hide();
+					}
+				},
+				error: function( jqXhr, textStatus, errorThrown ){
+					console.log("FAILED to establish secure session!");
+					console.log( errorThrown );
+				}
+			});
+		}, 10);
     });
 
     $("#but-signup-inc").click(function() {
@@ -74,8 +198,8 @@ $(document).ready(function() {
     });
 
     $("#but-signup-cancel").click(function() {
-        $(".form-signin").show();
         $(".form-signup").hide();
+        $(".form-signin").show();
         $('#frm-signin')[0].email.select();
     });
 
@@ -119,14 +243,12 @@ $(document).ready(function() {
 				var id = CryptoJS.SHA256(inEmail).toString();
 				var privkey  = crypt.getPrivateKey();
 				var pubkey   = crypt.getPublicKey();
-				var encprivkey = CryptoJS.AES.encrypt(privkey, auth).toString();
+				var encprivkey = Crypt.encrypt(privkey,auth);
 				var guard = CryptoJS.SHA256(encprivkey).toString();
 				var guard_hash = CryptoJS.SHA256(guard + auth).toString();
 
 				var org = Orgs.newOrgPack({ name: inEmail, key: privkey });
 				console.assert(org.orgpack.s);
-
-				// since this is the orgpack for the user, we need to save the
 
 				// generate an account-guard (just a hash of the encrypted private key).
 				var sdata = {
@@ -154,7 +276,6 @@ $(document).ready(function() {
 						if (data.success) {
 							console.log("New Account Request done");
 
-							// TODO: Need to store the relevant information in the sessionStorage.
 							sessionStorage.setItem("authkey", auth);
 
 							var orgs = {};
@@ -162,16 +283,22 @@ $(document).ready(function() {
 
 							sessionStorage.setItem("orgs", JSON.stringify(orgs))
 
-							// TODO: Need to store the user and org data in the localStorage (if the user selected that option).
 							localStorage.setItem("privkey", encprivkey);
 							localStorage.setItem("mainorgid", org.orgid);
 
+							// if the user selected to rememebr the login, then we also store the auth-hash in localstorage
+							if ($("#login-remember2").is(':checked')) {
+								localStorage.setItem("auth", auth);
+							}
+
+
 							// TODO: need to add this organisation to the dashboard, and then switch to it.
 							Dashboard.AddOrg(org);
-							Dashboard.SelectOrg(org);
 
-							$("#intro").hide();
-							$("#main").show();
+							Dashboard.Login({
+								'privkey': encprivkey,
+								'auth':    auth
+							})
 						}
 						else {
 							console.log("Failed to create account");
@@ -198,9 +325,24 @@ $(document).ready(function() {
 
     // check the sessionStorage to see if we have anything unpacked in there.
     // if not, then we need to ask the user to login.
+	if ("privkey" in localStorage) {
+		// we have the privkey... do we also have the auth?
+		if ("auth" in localStorage) {
+			// we have the auth and the privkey... so the user wants to automatically login.
+			Dashboard.Login({
+				'privkey': localStorage["privkey"],
+				'auth':    localStorage["auth"]
+			})
+		}
+	}
+	else {
+		// if we do not have the privkey, we will definately need the user to login (or create an account).
+
+	}
 
 
 	// TODO: Setup timer to check the User Messages
+
 
 
 	// TODO: Setup timers to check the messages for the Organisations.
