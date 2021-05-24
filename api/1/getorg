@@ -1,0 +1,70 @@
+#!/bin/bash
+#
+# PIT Backend API Script
+# https://github.com/hyper/pit
+# CGI Framework based from https://github.com/ruudud/cgi
+#
+########
+# Get the Orgpack for an organisation.  The server does not know if a user is a valid member of the organisation, but they will not be able to access the contents without being provided the keys.
+#
+#
+
+
+
+
+if [[ "$SCRIPT_FILENAME" ]]; then
+  . "$(dirname $SCRIPT_FILENAME)/.pit-common"
+else
+  . "$(dirname $(pwd)$SCRIPT_NAME)/.pit-common"
+fi
+
+# enable debugging for now.
+PIT_DEBUG=1
+
+
+# Common headers goes here.  We will always return a 200.
+echo "Content-Type: application/json"
+echo "Status: 200 OK"
+echo ""
+
+
+# expected parameters.
+#                 'oid': orgid,
+
+
+
+SOID=$(urldecode ${POST_PARAMS["oid"]})
+
+
+debug_out "[getorg] SOID:$SOID"
+
+
+DOPACK=$(query "SELECT OrgPack FROM Organisations WHERE OrgHash='$SOID'")
+if [[ -n $DOPACK ]]; then
+  out_err "notexist" "organisation does not exist"
+  exit 0;
+fi
+debug_out "[getorg] DOPACK: $DOPACK"
+
+PACKFILE=$PIT_DATA_DIR/packs/$SOID/${DOPACK:0:6}/$DOPACK.pack
+debug_out "[getorg] PACKFILE: $PACKFILE"
+
+
+if [[ ! -e $PACKFILE  ]]; then
+  out_err "packfail" "failed to find the pack"
+  exit 0;
+fi
+
+
+echo "{"
+echo "  \"success\": true,"
+echo "  \"pack\": "
+cat $PACKFILE
+echo "}"
+
+
+# everything should be good at this point, so we exit.  Everything else after this point, is assuming there was a failure.
+exit 0
+
+
+

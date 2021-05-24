@@ -100,5 +100,35 @@ function work_file() {
 }
 
 
+function debug_out() {
+  if [[ $PIT_DEBUG -gt 0 ]]; then
+    local DATE=`date +"%F %T"`
+    echo "$DATE $*" >> $PIT_LOG_DEBUG
+  fi
+}
+
+
+function urldecode() {
+    # urldecode <string>
+
+    local url_encoded="${1//+/ }"
+    printf '%b' "${url_encoded//%/\\x}"
+}
+
+
+# Return a standard error result.
+function out_err() {
+    echo "{"
+    echo "  \"success\": false,"
+    echo "  \"reason\": \"$1\","
+    if [[ -n "$2" ]]; then
+		echo "  \"comment\": \"$2\""
+    fi
+    echo "}"
+}
+
+
+
+
 
 
