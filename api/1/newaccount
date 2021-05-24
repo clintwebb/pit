@@ -1,0 +1,108 @@
+#!/bin/bash
+#
+# PIT Backend API Script
+# https://github.com/hyper/pit
+#
+# Process new account request.
+#  (Note that this will likely be modular in the future, as different mechanisms might be utilised to authenticate new accounts)
+#
+# CGI Framework based from https://github.com/ruudud/cgi
+#
+
+
+
+
+if [[ "$SCRIPT_FILENAME" ]]; then
+  . "$(dirname $SCRIPT_FILENAME)/.pit-common"
+else
+  . "$(dirname $(pwd)$SCRIPT_NAME)/.pit-common"
+fi
+
+# enable debugging for now.
+PIT_DEBUG=1
+
+
+# Common headers goes here.  We will always return a 200.
+echo "Content-Type: application/json"
+echo "Status: 200 OK"
+echo ""
+
+
+# expected parameters.
+#                 'id': id-hash,
+#                 'g': guard,
+#                 'gh': guard_hash,
+#                 'pr': encprivkey,
+#                 'pub': pubkey,
+#                 'oid': orgid,
+#                 'org-hash': orgpack.hash,
+#                 'org-key': orgpack.key,
+#                 'org-data': orgpack.data,
+#                 'org-sign': orgpack.sign
+
+
+SID=$(urldecode ${POST_PARAMS["id"]})
+debug_out "[newaccount] id-hash:$SID"
+
+# check the database to ensure that
+DBUID=$(query "SELECT UserID FROM Users WHERE IDHash='$SID'")
+debug_out "[newaccount] DBUID:$DBUID"
+if [[ -n $DBUID ]]; then
+  # the user hash already exists.
+  debug_out "[newaccount] User already exists"
+  out_err "exists" "User already exists"
+  exit 0
+fi
+
+debug_out "[newaccount] UID:$UID"
+
+SG=$(urldecode ${POST_PARAMS["g"]})
+SGH=$(urldecode ${POST_PARAMS["gh"]})
+SPR=$(urldecode ${POST_PARAMS["pr"]})
+SPUB=$(urldecode ${POST_PARAMS["pub"]})
+SOID=$(urldecode ${POST_PARAMS["oid"]})
+SOH=$(urldecode ${POST_PARAMS["oh"]})
+SOK=$(urldecode ${POST_PARAMS["ok"]})
+SOD=$(urldecode ${POST_PARAMS["od"]})
+SOS=$(urldecode ${POST_PARAMS["os"]})
+
+
+debug_out "[newaccount] SOID:$SOID"
+
+
+# TODO - verify that the org-sign is a valid signature of org-data with the public key.
+#
+
+
+
+
+
+DUID=$(query_insert "INSERT INTO Users (IDHash, Guard, GuardHash, RecoveryPack, PublicKey, OrgHash) VALUES ('$SID', '$SG', '$SGH', '$SPR', '$SPUB', '$SOID')")
+DOID=$(query_insert "INSERT INTO Organisations (OrgHash, OrgPack, PublicKey) VALUES ('$SOID', '$SOH', '$SPUB')")
+
+debug_out "[newaccount] UID:$DUID, OID:$DOID"
+
+# Verify the Org doesn't already exist, and Create the Org directory
+if [[ -d $PIT_DATA_DIR/packs/$SOID ]]; then
+  out_err "exists" "Organisation already exists"
+  exit 0;
+else
+  mkdir $PIT_DATA_DIR/packs/$SOID
+  mkdir $PIT_DATA_DIR/packs/$SOID/${SOH:0:6}
+
+  echo "{ \"h\": \"$SOH\", \"k\": \"$SOK\", \"d\": \"$SOD\", \"s\": \"$SOS\" }" > $PIT_DATA_DIR/packs/$SOID/${SOH:0:6}/$SOH.pack
+fi
+
+
+## format the output.
+EOUT="{ \"success\": true }"
+
+#  POST_vars_to_str result
+echo "$EOUT"
+debug_out "[newaccount] output - $EOUT"
+
+# everything should be good at this point, so we exit.  Everything else after this point, is assuming there was a failure.
+exit 0
+
+
+

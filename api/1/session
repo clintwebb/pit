@@ -8,7 +8,7 @@
 # CGI Framework based from https://github.com/ruudud/cgi
 #
 
-# httputils creates the associative arrays POST_PARAMS and GET_PARAMS
+
 if [[ "$SCRIPT_FILENAME" ]]; then
   . "$(dirname $SCRIPT_FILENAME)/.pit-common"
 else
@@ -16,49 +16,97 @@ else
 fi
 
 
-
-
 # Common headers goes here
 echo "Content-Type: application/json"
 
 # we have a new request to establish a session.  We have received the public key for the session.
 
-## TODO - check the integrity of the private key, before we waste resources generating a new keypair.
+## TODO - check the integrity of the session-client-public key, before we waste resources generating a new keypair.
 
-# Create new keypair
-
-# Create record in session table.
-
-
-## TODO - the client key is encoded in safe-html... so will need to have some characters replaced.
-
-  echo "Client Public Key:" >> /srv/pit/log/pit-debug.log
-  echo ${POST_PARAMS["puk"]} >> /srv/pit/log/pit-debug.log
+# if the max expiry time isn't in the config, then we will hard-code a default.
+if [[ $PIT_MAX_SESSION_EXPIRE -le 0 ]]; then
+  PIT_MAX_SESSION_EXPIRE=600
+fi
 
 
 
+# create a new sessions record in the database.
+SID=$(query_insert "DELETE FROM Sessions WHERE datetime(Expires) < datetime('now');INSERT INTO Sessions (Expires, SessionLimit) VALUES (datetime('now','$PIT_MAX_SESSION_EXPIRE seconds'), $PIT_MAX_SESSION_EXPIRE);")
+debug_out "session/[$SID]: New Session created"
+if [[ $SID -gt 0 ]]; then
 
-  # create a new sessions record in the database.
-  session_id=$(query_insert "INSERT INTO Sessions (LastAccess, ExpireTime) VALUES (date('now'), 600);")
-  echo "New Session: $session_id" >> /srv/pit/log/pit-debug.log
+  SESSION_CLIENT_PUBLIC=$PIT_DATA_DIR/sessions/$SID-client.pem
+  SESSION_SERVER_PRIVATE=$PIT_DATA_DIR/sessions/$SID-server.pem
 
-
-  PUKFILE=$(work_file "session-client-key" "pem");
-  echo "work_file: $PUKFILE" >> /srv/pit/log/pit-debug.log
-
+  # SAVE the session-client-public key.
   # puk is base64, so as we are writing it to the file, we decode it.
-  echo ${POST_PARAMS["puk"]} | base64 -d > $PIT_DATA_DIR/sessions/$session_id-client.pem
+  urldecode ${POST_PARAMS["puk"]} | base64 -d > $SESSION_CLIENT_PUBLIC
+  if [[ -e $SESSION_CLIENT_PUBLIC ]]; then
+    debug_out "session/[$SID]: Session Client Public saved: $SESSION_CLIENT_PUBLIC"
 
-  # create a new privatekey pair for the session.  Obtain the public key and send it back tot he client.  we dont need to store it.
+    # create a new privatekey pair for the session.
+    openssl genrsa -out $SESSION_SERVER_PRIVATE 2048 >/dev/null
+    if [[ -e $SESSION_SERVER_PRIVATE ]]; then
+      debug_out "session/[$SID]: Session Private key created: $SESSION_SERVER_PRIVATE"
+
+      # extract the public key from the session-server-private key.
+      # save it to a temporary file, we dont need to store it permenantly.
+      FILE_OUT=$(work_file "sessionout" "pem")
+      openssl rsa -in $SESSION_SERVER_PRIVATE -outform PEM -pubout -out $FILE_OUT >/dev/null
+      if [[ -e $FILE_OUT ]]; then
+        debug_out "session/[$SID]: Session Server Public key generated: $FILE_OUT"
+
+        # just to make it easier, we will base64 the server-public key.
+        SPUB=$(base64 -w0 $FILE_OUT)
+        debug_out "session/[$SID]: SPUB: $SPUB"
+
+        rm $FILE_OUT
+        debug_out "session/[$SID]: Session Server Public key no longer needed.  File Deleted: $FILE_OUT"
+
+        # create the data-output (pure form)
+        DOUT="{ \"success\": true, \"sid\": $SID, \"public\": \"$SPUB\", \"timeout\": $PIT_SESSION_EXPIRE }"
+        debug_out "DOUT: $DOUT"
+
+        # Now we need to encrypt the data output.
+        ## generate a random password
+        FFF=$(openssl rand -hex 64)
+        debug_out "FFF: $FFF"
+
+        ## Encrypt the password with the client public key.
+        AA=$(echo -n $FFF|openssl rsautl -encrypt -inkey $SESSION_CLIENT_PUBLIC -pubin|base64 -w0)
+        debug_out "AA: $AA"
+
+        ## AES encrypt DOUT with that password
+        BB=$(echo $DOUT | openssl enc -pbkdf2 -aes-256-cbc -pass pass:$FFF -a -A)
+        debug_out "BB: $BB"
 
 
-#  POST_vars_to_str result
-  echo "Status: 200 OK"
-  echo ""
 
-  echo "Finished parsing POST" >> /srv/pit/log/pit-debug.log
-  echo "New Session established"
-  exit 0
+        ## format the output.
+        EOUT="{ \"k\": \"$AA\", \"d\": \"$BB\" }"
+
+        #  POST_vars_to_str result
+        echo "Status: 200 OK"
+        echo ""
+#         debug_out "session/[$SID]: output - $EOUT"
+        echo "$EOUT"
+
+        # everything should be good at this point, so we exit.  Everything else after this point, is assuming there was a failure.
+        exit 0
+      fi
+    fi
+  fi
+fi
 
 
-
+#######################################
+# If we get to this point, something failed, so we are returning a fail result.
+echo "Status: 500 Failure"
+echo ""
+echo "{"
+echo "  result: 'failed'"
+if [[ -n "$1" ]]; then
+  echo "  comment: '$1'"
+fi
+echo "}"
+exit 0

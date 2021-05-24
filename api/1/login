@@ -1,0 +1,103 @@
+#!/bin/bash
+#
+# PIT Backend API Script
+# https://github.com/hyper/pit
+#
+# CGI Framework based from https://github.com/ruudud/cgi
+#
+#######
+# Process login requests
+#
+#
+
+
+
+
+if [[ "$SCRIPT_FILENAME" ]]; then
+  . "$(dirname $SCRIPT_FILENAME)/.pit-common"
+else
+  . "$(dirname $(pwd)$SCRIPT_NAME)/.pit-common"
+fi
+
+# enable debugging for now.
+PIT_DEBUG=1
+
+
+# Common headers goes here.  We will always return a 200.
+echo "Content-Type: application/json"
+echo "Status: 200 OK"
+echo ""
+
+
+# expected parameters.
+#   Phase 1
+#                 'id': id-hash,
+#
+#   Phase 2
+#                 'id': id-hash,
+#                 'gh': guard_hash,
+
+
+SID=$(urldecode ${POST_PARAMS["id"]})
+debug_out "[login] id-hash:$SID"
+
+# check the database to ensure that
+DBUID=$(query "SELECT UserID FROM Users WHERE IDHash='$SID'")
+debug_out "[login] DBUID:$DBUID"
+if [[ -z $DBUID ]]; then
+  # the user doesn't exist.
+  debug_out "[login] User doesn't exist"
+  out_err "invalid" "Invalid User Account"
+  exit 0
+fi
+
+SGH=$(urldecode ${POST_PARAMS["gh"]})
+if [[ -z $SGH ]]; then
+  debug_out "[login] Phase 1 - sending guard."
+  # the hash wasn't provided, so the client is asking for the Guard.
+  DBGUARD=$(query "SELECT Guard FROM Users WHERE UserID=$DBUID")
+
+  echo "{ \"success\": true, \"g\": \"$DBGUARD\"}"
+
+else
+  debug_out "[login] Phase 2 - received guard."
+  # the hash was provided, so we need to verify it is what we expect.
+  DBGUARD=$(query "SELECT GuardHash FROM Users WHERE UserID=$DBUID")
+  if [[ $DBGUARD == $SGH ]]; then
+    # it is a match
+
+    DREC=$(query "SELECT RecoveryPack FROM Users WHERE UserID=$DBUID")
+    DOH=$(query "SELECT OrgHash FROM Users WHERE UserID=$DBUID")
+    DORGPACK=$(query "SELECT OrgPack FROM Organisations WHERE OrgHash=\"$DOH\"")
+
+    PACKFILE=$PIT_DATA_DIR/packs/$DOH/${DORGPACK:0:6}/$DORGPACK.pack
+    debug_out "[login] PACKFILE: $PACKFILE"
+
+	if [[ ! -e $PACKFILE  ]]; then
+      debug_out "[login] failed to find PACKFILE: $PACKFILE"
+	  out_err "packfail" "failed to find the pack"
+  	  exit 0;
+	fi
+
+
+    echo "{"
+    echo "  \"success\": true,"
+    echo "  \"rec\": \"$DREC\","
+    echo "  \"orgpack\": "
+    cat $PACKFILE
+    echo "}"
+
+    debug_out "[login] Phase 2 - complete."
+
+  else
+    debug_out "[login] Invalid Hash"
+    out_err "invalid" "Invalid User Account"
+  fi
+
+fi
+
+
+
+
+
+

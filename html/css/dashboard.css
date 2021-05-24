@@ -8,6 +8,102 @@ body {
   vertical-align: text-bottom;
 }
 
+
+.loader{
+    position: absolute;
+    top:0px;
+    right:0px;
+    width:100%;
+    height:100%;
+    background-color:#eceaea;
+    background-image:url('/images/ZZ5H.gif');
+    background-size: 50px;
+    background-repeat:no-repeat;
+    background-position:center;
+    z-index:10000000;
+    opacity: 0.4;
+    filter: alpha(opacity=40);
+}
+
+
+
+
+.intro-header {
+  max-width: 700px;
+}
+
+
+#main {
+  display: none;
+}
+
+
+.form-signin {
+  width: 100%;
+  max-width: 330px;
+  padding: 15px;
+  margin: auto;
+}
+
+.form-signin .checkbox {
+  font-weight: 400;
+}
+
+.form-signin .form-floating:focus-within {
+  z-index: 2;
+}
+
+.form-signin input[type="email"] {
+  margin-bottom: -1px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.form-signin input[type="password"] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.form-signup {
+    display: none;
+    width: 100%;
+    max-width: 330px;
+    padding: 15px;
+    margin: auto;
+}
+
+.form-signup .checkbox {
+  font-weight: 400;
+}
+
+.form-signup .form-floating:focus-within {
+  z-index: 2;
+}
+
+.form-signup input[type="email"] {
+  margin-bottom: -1px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.form-signup input[type="password"] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.form-signup input[type="password"] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+
+
+
+
+
 /*
  * Sidebar
  */
