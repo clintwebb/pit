@@ -26,7 +26,8 @@ var Pack = {
 		console.assert(payload_ready);
 		console.assert(pkey);
 
-		var ps = encrypt.sign(Base64.decode(payload_ready), CryptoJS.SHA256, "sha256");
+		var digest = function(data){ return data; };
+		var ps = encrypt.sign(Base64.decode(payload_ready), digest);
 		console.assert(ps);
 
 		return {

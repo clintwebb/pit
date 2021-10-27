@@ -28,6 +28,8 @@ var Dashboard = {
 		alert("Selected: " + orgid);
 		navid="#nav-org-"+orgid;
 
+		localStorage.setItem('lastorg', orgid);
+
 		// lookup the details of this organisation
 		var org = Orgs.getOrg(orgid);
 		$("#dash-org-title").text(org.settings.orgname);
@@ -45,11 +47,30 @@ var Dashboard = {
         $("#intro").hide();
         $("#main").show();
 
+
 	},
 	Logout: function() {
 		// clear info out of the session and local storage
 		// reload the page.
+
+		$("#orglist").empty();
+
+		$('#frm-signin')[0].email.value = '';
+		$('#frm-signin')[0].pass.value = '';
+		$('#frm-signin')[0].email.select();
+
+		// the user has specifically selected to signout, so all session data should also be removed.
+		// if there is specific items we wish to retain, then that will need to be handled specifically
+		// (probably by grabbing those items, clearing everything, and then putting them back)
+		sessionStorage.clear();
+		localStorage.clear();
+
+		$("#main").hide();
+        $(".form-signup").hide();
+        $(".form-signin").show();
+        $("#intro").show();
 	}
+
 };
 
 (function () {
@@ -67,7 +88,7 @@ $(document).ready(function() {
 
 	$('#but-add-org').click(function() {
 // 		var org = Orgs.newOrgPack({name: "freddy"});
-		var org = { orgid: "blah", org: { settings: { orgname: "freddy"}}}
+		var org = { orgid: "blah", settings: { orgname: "freddy"}}
 		Dashboard.AddOrg(org);
 		alert("Functionality not yet available");
 	});
@@ -83,9 +104,11 @@ $(document).ready(function() {
 		// we set an almost immediate timout so that the browser can complete the "Loader" change.  The timeout then fires off, and performs the functionality.  This is to provide a faster visual response to the user.
 		setTimeout(function() {
 
-			// The username and password entered by the user, will be hashed to generate a large string (Account-Guard).
+			// The username and password entered by the user, will be hashed to generate a large string (Account-Guard).  Once we have the password from the form, we clear it.
 			var inEmail = $('#frm-signin-email').val();
-			var inPass = $('#frm-signin-email').val();
+			var inPass = $('#frm-signin-pass').val();
+ 			$('#frm-signin')[0].pass.value = '';
+
 			var auth = CryptoJS.SHA256(inEmail + inPass).toString();
 			console.assert(auth.length > 0);
 			console.log("long-passphrase: ", auth);
@@ -95,6 +118,10 @@ $(document).ready(function() {
 			// Now that we have our auth, and our ID, we need to attempt the first phase of the login.
 
 			// if we already have the privkey, then we just need to validate it.
+			if ("privkey" in localStorage) {
+				// NOTE that privkey should be protected by the auth.
+				// we already have the privkey in localStorage, so we just need to validate it.
+			}
 
 
 			var sdata = { 'id': id };
@@ -126,12 +153,11 @@ $(document).ready(function() {
 								if (data2.success) {
 									console.log("Login - phase 2 ok");
 
-// 									var privkey = CryptoJS.AES.decrypt(Base64.decode(data2.rec), auth).toString();
 									var privkey = Crypt.decryptString(data2.rec, auth);
-									console.log("privkey: ", privkey);
+// 									console.log("privkey: ", privkey);
 
-									var crypt = new JSEncrypt({default_key_size: 2048});
-									crypt.setPrivateKey(privkey);
+// 									var crypt = new JSEncrypt({default_key_size: 2048});
+// 									crypt.setPrivateKey(privkey);
 
 									var orgpack = Pack.unpack(privkey, data2.orgpack);
 
@@ -142,6 +168,9 @@ $(document).ready(function() {
 									if ($("#login-remember").is(':checked')) {
 										localStorage.setItem("auth", auth);
 									}
+
+									// now that we have the orgpack, we store it in the sessionStorage.
+// 									sessionStorage.setItem()
 
 									Dashboard.AddOrg(orgpack);
 									Dashboard.Login({
@@ -160,8 +189,7 @@ $(document).ready(function() {
 								console.log("FAILED to establish secure session!");
 								console.log( errorThrown );
 								alert("Login attempt failed... please try again.")
-								$('#frm-signup')[0].password.value = '';
-								$('#frm-signup')[0].verify.value = '';
+								$('#frm-signin')[0].pass.value = '';
 								$('#frm-signin')[0].email.select();
 								$(".loader").hide();
 							}
@@ -169,7 +197,7 @@ $(document).ready(function() {
 					}
 					else {
 						alert("Login attempt failed... please try again.")
-						$('#frm-signin')[0].password.value = '';
+						$('#frm-signin')[0].pass.value = '';
 						$('#frm-signin')[0].email.select();
 						$(".loader").hide();
 					}
@@ -193,8 +221,7 @@ $(document).ready(function() {
     });
 
     $("#but-signout").click(function() {
-        $("#main").hide();
-        $("#intro").show();
+		Dashboard.Logout();
     });
 
     $("#but-signup-cancel").click(function() {
@@ -283,8 +310,8 @@ $(document).ready(function() {
 
 							sessionStorage.setItem("orgs", JSON.stringify(orgs))
 
-							localStorage.setItem("privkey", encprivkey);
-							localStorage.setItem("mainorgid", org.orgid);
+							sessionStorage.setItem("privkey", encprivkey);
+							sessionStorage.setItem("mainorgid", org.orgid);
 
 							// if the user selected to rememebr the login, then we also store the auth-hash in localstorage
 							if ($("#login-remember2").is(':checked')) {
@@ -293,7 +320,7 @@ $(document).ready(function() {
 
 
 							// TODO: need to add this organisation to the dashboard, and then switch to it.
-							Dashboard.AddOrg(org);
+							Dashboard.AddOrg(org.org);
 
 							Dashboard.Login({
 								'privkey': encprivkey,
@@ -312,28 +339,17 @@ $(document).ready(function() {
 						console.log( errorThrown );
 					}
 				});
-
-
-
-
 			}, 10);
-
-
         }
     });
 
 
-    // check the sessionStorage to see if we have anything unpacked in there.
-    // if not, then we need to ask the user to login.
-	if ("privkey" in localStorage) {
-		// we have the privkey... do we also have the auth?
-		if ("auth" in localStorage) {
-			// we have the auth and the privkey... so the user wants to automatically login.
-			Dashboard.Login({
-				'privkey': localStorage["privkey"],
-				'auth':    localStorage["auth"]
-			})
-		}
+	if ("privkey" in localStorage && "auth" in localStorage) {
+		// we have the auth and the privkey... so the user wants to automatically login (or they refreshed the page).
+		Dashboard.Login({
+			'privkey': localStorage["privkey"],
+			'auth':    localStorage["auth"]
+		});
 	}
 	else {
 		// if we do not have the privkey, we will definately need the user to login (or create an account).

@@ -46,11 +46,11 @@
 			<h1 class="h3 mb-3 fw-normal">Welcome Back!</h1>
 
 			<div class="form-floating">
-				<input type="email" class="form-control" id="frm-signin-email" placeholder="name@example.com">
+				<input type="email" class="form-control" name="email" id="frm-signin-email" placeholder="name@example.com">
 				<label for="floatingInput">Email address</label>
 			</div>
 			<div class="form-floating">
-				<input type="password" class="form-control" id="frm-signup-pass" placeholder="Password">
+				<input type="password" class="form-control" name="pass" id="frm-signin-pass" placeholder="Password">
 				<label for="floatingPassword">Password</label>
 			</div>
 			<div class="checkbox mb-3">
@@ -127,7 +127,7 @@
         <div class="btn-toolbar mb-2 mb-md-0">
           <div class="btn-group me-2">
             <button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary">Settings</button>
           </div>
           <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
             <span data-feather="calendar"></span>
@@ -136,7 +136,10 @@
         </div>
       </div>
 
-      <h2>Section title</h2>
+      <h2 id="sect-title">Organisation</h2>
+
+
+
       <div class="table-responsive">
         <table class="table table-striped table-sm">
           <thead>
