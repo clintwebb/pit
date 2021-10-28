@@ -74,7 +74,7 @@ var Orgs = {
 // 						org = Pack.unpack()
 					}
 					else {
-						console.log("failed to ontain the org.");
+						console.log("failed to obtain the org.");
 					}
 				},
 				error: function( jqXhr, textStatus, errorThrown ){

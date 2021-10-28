@@ -1,8 +1,37 @@
 /* globals Chart:false, feather:false */
 
+		$(window).on('popstate', function(event) {
+		alert("pop");
+		});
 
 
 var Dashboard = {
+	Init: function() {
+
+		console.log("FEATHER")
+		feather.replace()
+
+
+		if ("uid" in localStorage && "privkey" in localStorage && "auth" in localStorage) {
+
+			// we have the auth and the privkey... so the user wants to automatically login (or they refreshed the page).
+			Dashboard.Login({
+				'uid':     localStorage["uid"],
+				'privkey': localStorage["privkey"],
+				'auth':    localStorage["auth"]
+			});
+		}
+		else {
+			// if we do not have the privkey, we will definately need the user to login (or create an account).
+
+		}
+
+		// TODO: Setup timer to check the User Messages
+		// TODO: Setup timers to check the messages for the Organisations.
+
+
+
+	},
 	AddOrg: function(orgdata) {
 		// this function is used to add an organisation to the Orgbar on the dashboard.
 
@@ -12,7 +41,7 @@ var Dashboard = {
 		console.assert(orgdata.settings);
 		console.assert(orgdata.settings.orgname);
 
- 		$("#orglist").append("<li class=\"nav-item\" id=\""+navid+"\"><a class=\"nav-link\" href=\"#\" onClick=Dashboard.SelectOrg(\""+orgdata.orgid+"\")><span data-feather=\"package\"></span>"+orgdata.settings.orgname+"</a></li>")
+ 		$("#orglist").append("<li class=\"nav-item\" id=\""+navid+"\"><a class=\"nav-link\" href=\"#\" onClick=Dashboard.SelectOrg(\""+orgdata.orgid+"\")><span data-feather=\"package\"></span>"+orgdata.settings.orgname+"</a></li>");
 // 			$('li').append("<p>hello</p>")
 // 				$('a', {class:"nav-link", href:"#", onclick: function() { Dashboard.SelectOrg(orgdata.orgid)}  }).append(
 // 					$('span', {'data-feather': "package"}).append(
@@ -34,7 +63,9 @@ var Dashboard = {
 		var org = Orgs.getOrg(orgid);
 		$("#dash-org-title").text(org.settings.orgname);
 	},
-	Login: function() {
+	Login: function(id, auth) {
+
+
 		// this function will be called the same way, under these circumstances:
 		//  * when the user logs in manually
 		//  * when the user logs in automatically
@@ -73,18 +104,13 @@ var Dashboard = {
 
 };
 
-(function () {
-  'use strict'
-
-  console.log("FEATHER")
-  feather.replace()
-
-})()
 
 
 $(document).ready(function() {
 
-	console.log("READY")
+	console.log("DASHBOARD READY");
+
+	Dashboard.Init();
 
 	$('#but-add-org').click(function() {
 // 		var org = Orgs.newOrgPack({name: "freddy"});
@@ -101,7 +127,8 @@ $(document).ready(function() {
 		// activate the loading overlay.
 		$(".loader").show();
 
-		// we set an almost immediate timout so that the browser can complete the "Loader" change.  The timeout then fires off, and performs the functionality.  This is to provide a faster visual response to the user.
+		// We set an almost immediate timout so that the browser can complete the "Loader" change.
+		// The timeout then fires off, and performs the functionality.  This is to provide a faster visual response to the user.
 		setTimeout(function() {
 
 			// The username and password entered by the user, will be hashed to generate a large string (Account-Guard).  Once we have the password from the form, we clear it.
@@ -174,6 +201,7 @@ $(document).ready(function() {
 
 									Dashboard.AddOrg(orgpack);
 									Dashboard.Login({
+										'uid':     id,
 										'privkey': data2.rec,
 										'auth':    auth
 									})
@@ -242,7 +270,7 @@ $(document).ready(function() {
 
         if (inPass1.localeCompare(inPass2) != 0) {
             // the passwords dont match.
-            alert("Passwords dont match.  Please try again");
+            alert("Passwords dont match.  Please try again.");
             $('#frm-signup')[0].password.value = '';
             $('#frm-signup')[0].verify.value = '';
             $('#frm-signup')[0].password.select();
@@ -342,26 +370,6 @@ $(document).ready(function() {
 			}, 10);
         }
     });
-
-
-	if ("privkey" in localStorage && "auth" in localStorage) {
-		// we have the auth and the privkey... so the user wants to automatically login (or they refreshed the page).
-		Dashboard.Login({
-			'privkey': localStorage["privkey"],
-			'auth':    localStorage["auth"]
-		});
-	}
-	else {
-		// if we do not have the privkey, we will definately need the user to login (or create an account).
-
-	}
-
-
-	// TODO: Setup timer to check the User Messages
-
-
-
-	// TODO: Setup timers to check the messages for the Organisations.
 
 
 
