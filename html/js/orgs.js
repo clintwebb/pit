@@ -26,6 +26,7 @@ var Orgs = {
 			orgid: idhash,
 			settings : { orgname: predata.name },
 			members: null,
+			orgs: null,
 			groups : {
 				'Internet': null,
 				'Shopping': null,
@@ -52,9 +53,9 @@ var Orgs = {
 
 		var org = null;
 
-
-		// we should really always have the mainorg in session storage.
-		console.assert("mainorg" in sessionStorage);
+		// we should really always have the mainorg in local storage.
+		console.assert("mainorgid" in sessionStorage);
+		console.assert("orgs" in sessionStorage);
 
 		var orgs = JSON.parse(sessionStorage["orgs"]);
 		if (orgid in orgs) {
