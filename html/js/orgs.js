@@ -5,6 +5,8 @@ var Orgs = {
 
     newOrgPack : function(predata) {
 
+		console.assert(predata);
+		console.assert(predata.settings);
 		if (! predata.name) { predata.name = "Unnamed"; }
 
 		// Returns a data that will be injected in a request to create a new organisation.
@@ -14,17 +16,15 @@ var Orgs = {
 		if (predata.key) { crypt.setPrivateKey(predata.key); }
 		else { crypt.getKey(); }
 
-
         var privkey  = crypt.getPrivateKey();
         var pubkey  =  crypt.getPublicKey();
 
 		// id doesn't matter what this is, as long it is fairly unique.  This will be the identifier of this organisation.
-		var idhash = CryptoJS.SHA256(privkey + Pack.randpass() + name).toString();
-
+		var idhash = CryptoJS.SHA256(privkey + Pack.randpass() + predata.name).toString();
 
 		var sendorg = {
 			orgid: idhash,
-			settings : { orgname: predata.name },
+			settings : predata.settings,
 			members: null,
 			orgs: null,
 			groups : {
@@ -48,7 +48,7 @@ var Orgs = {
         return result;
 
     },
-	getOrg: function(orgid) {
+	getOrg: function(orgid, fn) {
 		console.log("GetOrg - getting the organisation data");
 
 		var org = null;
@@ -71,7 +71,7 @@ var Orgs = {
 				data: {'oid': orgid},
 				success: function( data, textStatus, jQxhr ){
 					if (data.success) {
-						console.log("we have the org data")
+						console.log("we have the org data.")
 // 						org = Pack.unpack()
 					}
 					else {
@@ -90,6 +90,18 @@ var Orgs = {
 		}
 
 		return org;
+	},
+	updateOrgPack: function(orgkey, newpack) {
+		console.log("Update Org Pack");
+
+		// submit the new org pack,
+		// update the internal structures
+		// if it is the main org of a user, then we encrypt it with the privkey in session.
+		// if it is not the main org, then we need to get the privkey for that org, out of the users mainorg.
+
+		var updatedOrgPack = pack.pack(orgkey, newpack);
+
+
 	}
 };
 

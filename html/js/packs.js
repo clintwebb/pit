@@ -14,12 +14,12 @@ var Pack = {
 	pack: function(privkey, data) {
 		// generate the pack information.
 		console.assert(privkey);
+		console.assert(data);
 
 		// generate a random string aes-key
 		var pkey = this.randpass();
 		console.assert(pkey);
-		console.assert(data);
-		var payload_ready= CryptoJS.AES.encrypt(data, pkey).toString();
+		var payload_ready = CryptoJS.AES.encrypt(data, pkey).toString();
 
 		var encrypt = new JSEncrypt();
 		encrypt.setPrivateKey(privkey);
@@ -54,15 +54,19 @@ var Pack = {
 
 		console.assert(privkey);
 		console.assert(data.k);
+		console.assert(data.d);
+		console.assert(data.h);
 
 		// now we decrypt the key with our saved private key.
 		var decrypt = new JSEncrypt();
 		decrypt.setPrivateKey(privkey);
-		var password = decrypt.decrypt(data.k);
+		const password = decrypt.decrypt(data.k);
+		const edata = CryptoJS.AES.decrypt( data.d, password);
+		const rawpack = edata.toString(CryptoJS.enc.Utf8);
+		const packid = CryptoJS.SHA256(rawpack).toString();
+		console.assert(packid == data.h);
 
-		var data = CryptoJS.AES.decrypt( data.d, password);
-
-		return JSON.parse(data.toString(CryptoJS.enc.Utf8));
+		return { pack: JSON.parse(rawpack), packid: packid };
 	}
 
 

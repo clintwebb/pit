@@ -5,8 +5,13 @@
 # CGI Framework based from https://github.com/ruudud/cgi
 #
 ########
-# Get the Orgpack for an organisation.  The server does not know if a user is a valid member of the organisation, but they will not be able to access the contents without being provided the keys.
+# Update the orgpack for an organisation.
 #
+#     expected parameters.
+#        oid:     idhash of the org being updated.
+#        oldpack: pack that is being replaced.
+#        newhash:
+#        newpack:
 #
 
 
@@ -18,6 +23,9 @@ else
   . "$(dirname $(pwd)$SCRIPT_NAME)/.pit-common"
 fi
 
+# enable debugging for now.
+PIT_DEBUG=1
+
 
 # Common headers goes here.  We will always return a 200.
 echo "Content-Type: application/json"
@@ -25,34 +33,30 @@ echo "Status: 200 OK"
 echo ""
 
 
-# expected parameters.
-#                 'oid': orgid,
-
 
 
 SOID=$(urldecode ${POST_PARAMS["oid"]})
+SOH=$(urldecode ${POST_PARAMS["oh"]})
+SOK=$(urldecode ${POST_PARAMS["ok"]})
+SOD=$(urldecode ${POST_PARAMS["od"]})
+SOS=$(urldecode ${POST_PARAMS["os"]})
 
 
-debug_out "[getorg] SOID:$SOID"
+debug_out "[updateorg] SOID:$SOID"
 
 
-DOPACK=$(query "SELECT OrgPack FROM Organisations WHERE OrgHash='$SOID'")
-if [[ -n $DOPACK ]]; then
+OLDPACK=$(query "SELECT OrgPack FROM Organisations WHERE OrgHash='$SOID'")
+if [[ -n $OLDPACK ]]; then
   out_err "notexist" "organisation does not exist"
   exit 0;
 fi
-debug_out "[getorg] DOPACK: $DOPACK"
+debug_out "[updateorg] OLDPACK: $OLDPACK"
 
 PACKFILE=$PIT_DATA_DIR/packs/$SOID/${DOPACK:0:6}/$DOPACK.pack
-debug_out "[getorg] PACKFILE: $PACKFILE"
-GZP="$PACKFILE.gz"
+debug_out "[updateorg] PACKFILE: $PACKFILE"
 
-if [[ -e $PACKFILE ]]; then
-  # file already exists, but wasn't gzippped, so we do that now
-  gzip $PACKFILE
-fi
 
-if [[ ! -e $GZP  ]]; then
+if [[ ! -e $PACKFILE  ]]; then
   out_err "packfail" "failed to find the pack"
   exit 0;
 fi
@@ -60,9 +64,8 @@ fi
 
 echo "{"
 echo "  \"success\": true,"
-echo "  \"packid\": \"$DOPACK\","
 echo "  \"pack\": "
-zcat $GZP
+cat $PACKFILE
 echo "}"
 
 

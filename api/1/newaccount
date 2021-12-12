@@ -91,6 +91,7 @@ else
   mkdir $PIT_DATA_DIR/packs/$SOID/${SOH:0:6}
 
   echo "{ \"h\": \"$SOH\", \"k\": \"$SOK\", \"d\": \"$SOD\", \"s\": \"$SOS\" }" > $PIT_DATA_DIR/packs/$SOID/${SOH:0:6}/$SOH.pack
+  gzip $PIT_DATA_DIR/packs/$SOID/${SOH:0:6}/$SOH.pack
 fi
 
 

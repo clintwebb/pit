@@ -72,9 +72,17 @@ else
 
     PACKFILE=$PIT_DATA_DIR/packs/$DOH/${DORGPACK:0:6}/$DORGPACK.pack
     debug_out "[login] PACKFILE: $PACKFILE"
+	GZP="$PACKFILE.gz"
 
-	if [[ ! -e $PACKFILE  ]]; then
-      debug_out "[login] failed to find PACKFILE: $PACKFILE"
+	if [[ -e $PACKFILE ]]; then
+		# file already exists, but wasn't gzippped, so we do that now
+		debug_out "[login] Gzipping PACKFILE: $PACKFILE"
+		gzip $PACKFILE
+	fi
+
+	if [[ ! -e $GZP  ]]; then
+
+      debug_out "[login] failed to find PACKFILE: $GZP"
 	  out_err "packfail" "failed to find the pack"
   	  exit 0;
 	fi
@@ -83,8 +91,9 @@ else
     echo "{"
     echo "  \"success\": true,"
     echo "  \"rec\": \"$DREC\","
+    echo "  \"packid\": \"$DORGPACK\","
     echo "  \"orgpack\": "
-    cat $PACKFILE
+    zcat $GZP
     echo "}"
 
     debug_out "[login] Phase 2 - complete."
